@@ -12,7 +12,7 @@ lostfilm_initial_value = Lf.LostFilm()
 def initialization():
     global lostfilm_initial_value
     start_time = time.time()
-    lostfilm_initial_value = Lf.Initialization()
+    lostfilm_initial_value = Lf.initialization()
     log.info("LostFilm initialization: %s seconds" % (time.time() - start_time))
 
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     initialization()
     while True:
-        lf_updates = Lf.CheckUpdates(lostfilm_initial_value)
+        lf_updates = Lf.check_updates(lostfilm_initial_value)
         if lf_updates:
             Notify.Send(lf_updates, Lf.LostFilm.RESOURCE)
             lostfilm_initial_value = lf_updates[-1]
