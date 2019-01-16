@@ -24,7 +24,7 @@ if __name__ == "__main__":
     while True:
         lf_updates = Lf.check_updates(lostfilm_initial_value)
         if lf_updates:
-            Notify.Send(lf_updates, Lf.LostFilm.RESOURCE)
+            Notify.send(lf_updates, Lf.LostFilm.RESOURCE)
             lostfilm_initial_value = lf_updates[-1]
         time.sleep(sleep_time)
     pass
