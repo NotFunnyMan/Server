@@ -26,5 +26,5 @@ if __name__ == "__main__":
         if lf_updates:
             Notify.Send(lf_updates, Lf.LostFilm.RESOURCE)
             lostfilm_initial_value = lf_updates[-1]
-        #time.sleep(sleep_time)
+        time.sleep(sleep_time)
     pass
