@@ -1,4 +1,5 @@
 import requests
+import random
 
 url = "https://fcm.googleapis.com/fcm/send"
 header = {'Content-Type': 'application/json',
@@ -9,8 +10,7 @@ moms_phone = "cVlwEWGhcb0:APA91bHtkiJ9l7gSGVd-B2Vch3s4yQ_x9c9NUeJHhf7yQqJY1R5v0x
 emulator = "fQcEmWa2IYA:APA91bF4LwLgza1JLGEuj8Z8KdBfYYD4N9DoOmMF-10Uuwkbq58X5G5PFe1MkvobsgcXywbfiPSka752JQ47gAauKM9rHCnzlTHqww8kQm--vuy62-PeZL_lRpD8PFHbZerdj3wOR9M8ISvSMSbMRfJgcLOpNKCgyw"
 
 
-def Send(updates, resource):
-    i = 0
+def send(updates, resource):
     for update in updates:
         data = {
                 "data":
@@ -21,10 +21,9 @@ def Send(updates, resource):
                         "resource": resource,
                         "sound": "default",
                         "priority": "high",
-                        "id": i
+                        "id": random.randint(1, 1000)
                     },
                 "to": my_phone
                 }
         res = requests.post(url, headers=header, json=data, verify=False)
         print(res)
-        i += 1
