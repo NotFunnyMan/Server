@@ -17,7 +17,7 @@ def initialization():
 
 
 if __name__ == "__main__":
-    log.basicConfig(level=log.ERROR, filename='../../server.log',
+    log.basicConfig(level=log.ERROR, filename='server.log',
                     format=u"%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s")
 
     initialization()
