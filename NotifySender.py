@@ -25,6 +25,6 @@ def Send(updates, resource):
                     },
                 "to": my_phone
                 }
-        res = requests.post(url, headers=header, json=data)
+        res = requests.post(url, headers=header, json=data, verify=False)
         print(res)
         i += 1
