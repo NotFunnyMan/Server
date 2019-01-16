@@ -3,7 +3,7 @@ import urllib.request as req
 import logging as log
 
 
-log.basicConfig(level=log.DEBUG, filename='../../server.log',
+log.basicConfig(level=log.DEBUG, filename='server.log',
                 format=u"%(filename)s\t[LINE:%(lineno)d]#\t %(levelname)-8s\t[%(asctime)s]\t%(message)s")
 
 
@@ -67,9 +67,9 @@ def GetSeriesList(root):
 
 
 # Поиск индекса последнего элемента в списке новых
-def GetIndex(list, elem):
-    for i in range(len(list)):
-        if list[i] == elem:
+def GetIndex(list_items, elem):
+    for i in range(len(list_items)):
+        if list_items[i] == elem:
             return i
     return -1
     pass

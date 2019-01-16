@@ -13,7 +13,7 @@ def initialization():
     global lostfilm_initial_value
     start_time = time.time()
     lostfilm_initial_value = Lf.Initialization()
-    print("---LF: %s seconds ---" % (time.time() - start_time))
+    log.info("LostFilm initialization: %s seconds" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
