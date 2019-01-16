@@ -3,7 +3,7 @@ import urllib.request as req
 import logging as log
 
 
-log.basicConfig(level=log.DEBUG, filename='../../server.log',
+log.basicConfig(level=log.DEBUG, filename='server.log',
                 format=u"%(filename)s\t[LINE:%(lineno)d]#\t %(levelname)-8s\t[%(asctime)s]\t%(message)s")
 
 
@@ -27,15 +27,15 @@ class LostFilm(object):
 
 
 # Инициализация модуля
-def Initialization():
-    xml_file = GetXML(LostFilm.URL)
+def initialization():
+    xml_file = get_xml(LostFilm.URL)
     if xml_file:
-        series = GetSeriesList(xml_file)
+        series = get_series_list(xml_file)
         return series[2]
 
 
 # Получение xml-файла по ссылке
-def GetXML(url):
+def get_xml(url):
     try:
         # Получение xml в string формате
         root = Xml.ElementTree(req.urlopen(url).read()).getroot()
@@ -48,7 +48,7 @@ def GetXML(url):
 
 
 # Получение списка серий из xml-файла
-def GetSeriesList(root):
+def get_series_list(root):
     res = []
     try:
         # Формирование списка элементов в которых хранится информация о вышедших сериях
@@ -67,22 +67,22 @@ def GetSeriesList(root):
 
 
 # Поиск индекса последнего элемента в списке новых
-def GetIndex(list, elem):
-    for i in range(len(list)):
-        if list[i] == elem:
+def get_index(list_items, elem):
+    for i in range(len(list_items)):
+        if list_items[i] == elem:
             return i
     return -1
     pass
 
 
 # Проверка обновлений
-def CheckUpdates(last_elem):
+def check_updates(last_elem):
     updates = []
-    xml_file = GetXML(LostFilm.URL)
+    xml_file = get_xml(LostFilm.URL)
     if xml_file:
-        series = GetSeriesList(xml_file)
+        series = get_series_list(xml_file)
         if series:
-            index = GetIndex(series, last_elem)
+            index = get_index(series, last_elem)
             for i in range(index):
                 updates.append(series[i])
             updates.reverse()
