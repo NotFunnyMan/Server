@@ -1,10 +1,14 @@
 import xml.etree.ElementTree as Xml
 import urllib.request as req
-import logging as log
+import logging
 
 
-log.basicConfig(level=log.DEBUG, filename='server.log',
-                format=u"%(filename)s\t[LINE:%(lineno)d]#\t %(levelname)-8s\t[%(asctime)s]\t%(message)s")
+logger = logging.getLogger("LostFilm")
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler("server.log")
+formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 
 class LostFilm(object):
@@ -40,7 +44,7 @@ def get_xml(url):
         # Получение xml в string формате
         root = Xml.ElementTree(req.urlopen(url).read()).getroot()
     except Exception as e:
-        log.error(log_message("Cannot get a XML-file: %s" % url, e))
+        logger.error(log_message("Cannot get a XML-file: %s" % url, e))
     else:
         # Создание xml из string
         root = Xml.fromstring(root)
@@ -59,11 +63,11 @@ def get_series_list(root):
             pub_date = item.find('pubDate').text
             link = item.find('link').text
 
-            seria = LostFilm(title, description, pub_date, link)
-            res.append(seria)
+            series = LostFilm(title, description, pub_date, link)
+            res.append(series)
         return res
     except Exception as e:
-        log.error(log_message("Cannot parse a xml-file. Please check xml-file", e))
+        logger.error(log_message("Cannot parse a xml-file. Please check xml-file", e))
 
 
 # Поиск индекса последнего элемента в списке новых
@@ -78,6 +82,7 @@ def get_index(list_items, elem):
 # Проверка обновлений
 def check_updates(last_elem):
     updates = []
+    logger.info("Start checking updates")
     xml_file = get_xml(LostFilm.URL)
     if xml_file:
         series = get_series_list(xml_file)
