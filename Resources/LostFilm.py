@@ -1,7 +1,9 @@
-import xml.etree.ElementTree as Xml
+from bs4 import BeautifulStoneSoup
 import urllib.request as req
 import logging
 
+# TODO: Добавить try - except
+# TODO: Переделать класс LostFilm
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
@@ -42,22 +44,19 @@ def initialization():
 def get_xml(url):
     try:
         # Получение xml в string формате
-        root = Xml.ElementTree(req.urlopen(url).read()).getroot()
+        soup = BeautifulStoneSoup(req.urlopen(url).read())
+        return soup
     except Exception as e:
         logger.error(log_message("Cannot get a XML-file: %s" % url, e))
-    else:
-        # Создание xml из string
-        root = Xml.fromstring(root)
-        return root
 
 
 # Получение списка серий из xml-файла
-def get_series_list(root):
+def get_series_list(soup):
     res = []
     try:
         # Формирование списка элементов в которых хранится информация о вышедших сериях
-        items = root[0].findall('item')
-        for item in items:
+        items_list = soup.findAll('item')
+        for item in items_list:
             title = item.find('title').text
             description = item.find('description').text
             pub_date = item.find('pubDate').text

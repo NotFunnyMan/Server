@@ -1,8 +1,15 @@
-import requests
+from bs4 import BeautifulStoneSoup
 
-url = "https://fcm.googleapis.com/fcm/send"
-data = ""
+xml_file = open('rss.xml', encoding='utf-8')
+soup = BeautifulStoneSoup(xml_file)
+print(soup)
+print("\n\n")
 
-res = requests.post(url, json=data, verify=False)
-print(res.reason)
-pass
+
+items_list = soup.findAll('item')
+print(items_list)
+
+for item in items_list:
+    test = item.find('title').text
+    print(test)
+    break
