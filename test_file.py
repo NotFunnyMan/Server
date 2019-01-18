@@ -1,15 +1,6 @@
-from bs4 import BeautifulStoneSoup
 
-xml_file = open('rss.xml', encoding='utf-8')
-soup = BeautifulStoneSoup(xml_file)
-print(soup)
-print("\n\n")
+list1 = [1,2,3,4,5,6]
+list2 = [10, 11, 12, 13]
 
+print(list1[:-2] + list2)
 
-items_list = soup.findAll('item')
-print(items_list)
-
-for item in items_list:
-    test = item.find('title').text
-    print(test)
-    break

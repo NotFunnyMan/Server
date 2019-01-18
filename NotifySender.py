@@ -27,7 +27,7 @@ def send(updates, resource):
                         {
                             "body": update.title,
                             "title": "Вышла новая серия сериала на " + resource,
-                            "icon": "http://" + update.description,
+                            "icon": "http://" + update.logo,
                             "resource": resource,
                             "sound": "default",
                             "priority": "high",
