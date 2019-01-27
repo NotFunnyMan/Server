@@ -1,5 +1,13 @@
 import requests
 import random
+import logging
+
+logger = logging.getLogger("Notify")
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler("server.log")
+formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 url = "https://fcm.googleapis.com/fcm/send"
 header = {'Content-Type': 'application/json',
@@ -11,19 +19,25 @@ emulator = "fQcEmWa2IYA:APA91bF4LwLgza1JLGEuj8Z8KdBfYYD4N9DoOmMF-10Uuwkbq58X5G5P
 
 
 def send(updates, resource):
-    for update in updates:
-        data = {
-                "data":
-                    {
-                        "body": update.title,
-                        "title": "Вышла новая серия сериала на " + resource,
-                        "icon": "http://" + update.description,
-                        "resource": resource,
-                        "sound": "default",
-                        "priority": "high",
-                        "id": random.randint(1, 1000)
-                    },
-                "to": my_phone
-                }
-        res = requests.post(url, headers=header, json=data, verify=False)
-        print(res)
+    try:
+        for update in updates:
+            logger.info("Send notification for resource: %s ; series: %s" % (resource, update.title))
+            data = {
+                    "data":
+                        {
+                            "body": update.title,
+                            "title": "Вышла новая серия сериала на " + resource,
+                            "icon": "http://" + update.logo,
+                            "resource": resource,
+                            "sound": "default",
+                            "priority": "high",
+                            "id": random.randint(1, 1000)
+                        },
+                    "to": my_phone
+                    }
+            res = requests.post(url, headers=header, json=data, verify=False)
+            logger.debug("Notification status code: %s" % res.status_code)
+            if res.status_code is not requests.codes.ok:
+                logger.error("%s" % res.reason)
+    except Exception as e:
+        logger.error("%s" % e)
