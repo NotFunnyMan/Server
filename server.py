@@ -12,7 +12,7 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
-sleep_time = 300
+sleep_time = 5
 start_time = time.time()
 lostfilm_initial_value = lf.LostFilm()
 logger.info("LostFilm initialization: %s seconds" % (time.time() - start_time))
@@ -24,6 +24,8 @@ if __name__ == "__main__":
             lf_updates = lostfilm_initial_value.check_updates()
             if lf_updates:
                 Notify.send(lf_updates, lostfilm_initial_value.RESOURCE)
+            else:
+                logger.info('No updates...')
             logger.info("Time to sleep....")
             time.sleep(sleep_time)
         except Exception as e:
