@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger("Series")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("server.log")
+fh = logging.FileHandler("/root/Server/server.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
