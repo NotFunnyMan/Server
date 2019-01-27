@@ -26,8 +26,9 @@ class LostFilm(object):
     def __init__(self):
         try:
             # Получение xml в string формате
-            soup = BeautifulStoneSoup(req.urlopen(self.URL).read())
-            self.FEED = (series.series_from_xml(soup, 'item'))[2:]
+            with req.urlopen(self.URL) as open_url:
+                soup = BeautifulStoneSoup(open_url.read())
+                self.FEED = (series.series_from_xml(soup, 'item'))[2:]
         except Exception as e:
             logger.error("Cannot get a XML-file: %s" % e)
 
