@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("/root/Server/server.log")
+fh = logging.FileHandler("server.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -39,8 +39,11 @@ class LostFilm(object):
             xml_file = BeautifulStoneSoup(req.urlopen(self.URL).read())
             if xml_file:
                 series_list = series.series_from_xml(xml_file)
-                updates = [elem for elem in series_list if elem not in self.FEED]  # self.FEED
-                self.FEED = updates + self.FEED[:-len(updates)]
+                updates = [elem for elem in series_list if elem not in self.FEED]
+                if len(self.FEED) == 12:
+                    self.FEED = updates + self.FEED[:-len(updates)]
+                else:
+                    self.FEED = updates + self.FEED
                 updates.reverse()
                 return updates
             else:
