@@ -11,14 +11,14 @@ formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
-
-sleep_time = 5
-start_time = time.time()
-lostfilm_initial_value = lf.LostFilm()
-logger.info("LostFilm initialization: %s seconds" % (time.time() - start_time))
+sleep_time = 300
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+    lostfilm_initial_value = lf.LostFilm()
+    logger.info("LostFilm initialization: %s seconds" % (time.time() - start_time))
+
     while True:
         try:
             lf_updates = lostfilm_initial_value.check_updates()
