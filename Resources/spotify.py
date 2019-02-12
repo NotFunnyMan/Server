@@ -21,5 +21,9 @@ except:
 
 
 sp = spotipy.Spotify(auth=token)
-results = sp.current_user()
-print(json.dumps(results, sort_keys=True, indent=4))
+#results = sp.current_user()
+#print(json.dumps(results, sort_keys=True, indent=4))
+
+
+results = sp.artist_albums('718COspgdWOnwOFpJHRZHS')
+print(json.dumps(results, indent=4))
