@@ -1,8 +1,9 @@
 import spotipy
 import spotipy.util as util
 import os
-import json
-import pprint
+import time
+# import json
+# import pprint
 
 username = 'pva55ddk3p2lm234s5yhh2dyl'
 scope = 'user-follow-read'
@@ -10,6 +11,8 @@ scope = 'user-follow-read'
 SPOTIPY_CLIENT_ID = 'aeb7e5af5a5545b188741217cf2f447a'
 SPOTIPY_CLIENT_SECRET = '8788d5b6f2c243448698e5424e81b0ed'
 SPOTIPY_REDIRECT_URI = 'https://google.com/'
+
+DELAY_API_REQUEST = 1
 
 
 class Artist(object):
@@ -55,11 +58,11 @@ class Artist(object):
         compilation - подборка из треков
 
         :return:
-        Последний альбом по каждой из категории
+            Последний альбом по каждой из категории
         """
 
-        return self.get_albums(limit=1), self.get_singles_or_eps(limit=1), \
-               self.get_appears_on(limit=1), self.get_compilations(limit=1)
+        return self.get_albums(limit=1)[0], self.get_singles_or_eps(limit=1)[0], \
+               self.get_appears_on(limit=1)[0], self.get_compilations(limit=1)[0]
 
     def get_albums(self, limit=None):
         """
@@ -82,7 +85,7 @@ class Artist(object):
             elif len(artist_albums) >= limit:
                 return artist_albums[:limit]
 
-        return artist_albums
+        return [Album('', '', '', '', '', '', '', '')] if len(artist_albums) == 0 else artist_albums
 
     def get_singles_or_eps(self, limit=None):
         """
@@ -104,7 +107,7 @@ class Artist(object):
             elif len(artist_singles) >= limit:
                 return artist_singles[:limit]
 
-        return artist_singles
+        return [Album('', '', '', '', '', '', '', '')] if len(artist_singles) == 0 else artist_singles
 
     def get_appears_on(self, limit=None):
         """
@@ -126,7 +129,7 @@ class Artist(object):
             elif len(artist_appears) >= limit:
                 return artist_appears[:limit]
 
-        return artist_appears
+        return [Album('', '', '', '', '', '', '', '')] if len(artist_appears) == 0 else artist_appears
 
     def get_compilations(self, limit=None):
         """
@@ -148,7 +151,7 @@ class Artist(object):
             elif len(artist_compilations) >= limit:
                 return artist_compilations[:limit]
 
-        return artist_compilations
+        return [Album('', '', '', '', '', '', '', '')] if len(artist_compilations) == 0 else artist_compilations
 
 
 def artist_from_json(js, spotify):
@@ -166,24 +169,14 @@ def artist_from_json(js, spotify):
 
 
 def artists_list_from_json(js, spotify):
+    """
+    Создание списка объектов класса Артист из списка json
+    :param
+        js: json-объект
+    :return:
+        Список объектов Артист из списка json
+    """
     return [artist_from_json(part, spotify) for part in js]
-
-
-def album_from_json(js):
-    """
-    Создание класса Альбом из фрагмента json
-
-    :params
-        js: json-фрагмент
-    :return
-        класс Альбом
-    """
-    return Album(js['id'], js['uri'], js['album_type'], js['name'], js['total_tracks'], js['release_date'],
-                 js['external_urls']['spotify'], js['images'])
-
-
-def albums_list_from_json(js):
-    return [album_from_json(part) for part in js]
 
 
 class Album(object):
@@ -219,84 +212,92 @@ class Album(object):
                      js['total_tracks'], js['release_date'], js['external_urls']['spotify'], js['images'])
 
 
+def album_from_json(js):
+    """
+    Создание класса Альбом из фрагмента json
+
+    :params
+        js: json-фрагмент
+    :return
+        класс Альбом
+    """
+    return Album(js['id'], js['uri'], js['album_type'], js['name'], js['total_tracks'], js['release_date'],
+                 js['external_urls']['spotify'], js['images'])
 
 
+def albums_list_from_json(js):
+    """
+    Создание списка объектов класса Альбом из списка json
+    :param
+        js: json-объект
+    :return:
+        Список объектов Альбом из списка json
+    """
+    return [album_from_json(part) for part in js]
 
 
+def check_updates(artists_list):
+    for artist in artists_list:
+        album, single_ep, appears, compilation = artist.get_latest_compositions()
+        if album != artist.latest_album:
+            print('NEW ALBUM!\n')
+            last_10_albums = artist.get_albums(limit=10)
+            new_ones = last_10_albums[:last_10_albums.index(album)]
+            print('Artist:%s\nNew albums\n' % artist.name)
+            for ones in new_ones:
+                print('Name: %s' % ones.name)
+            artist.latest_album = album
+        if single_ep != artist.latest_single:
+            print('NEW SINGLE OR EP!\n')
+            last_10_single = artist.get_singles_or_eps(limit=10)
+            new_ones = last_10_single[:last_10_single.index(album)]
+            print('Artist:%s\nNew single or EP\n' % artist.name)
+            for ones in new_ones:
+                print('Name: %s' % ones.name)
+            artist.latest_single = single_ep
+        if appears != artist.latest_appears:
+            print('NEW APPEARS!\n')
+            last_10_appears = artist.get_albums(limit=10)
+            new_ones = last_10_appears[:last_10_appears.index(album)]
+            print('Artist:%s\nNew appears\n' % artist.name)
+            for ones in new_ones:
+                print('Name: %s' % ones.name)
+            artist.latest_appears = appears
+        if compilation != artist.latest_compilation:
+            print('NEW COMPILATION!\n')
+            last_10_compilations = artist.get_compilations(limit=10)
+            new_ones = last_10_compilations[:last_10_compilations.index(album)]
+            print('Artist:%s\nNew albums\n' % artist.name)
+            for ones in new_ones:
+                print('Name: %s' % ones.name)
+            artist.latest_compilation = compilation
+        time.sleep(DELAY_API_REQUEST)
+        print('TIME TO SLEEP....\n\n\n')
 
 
+if __name__ == '__main__':
+    # Get the token
+    try:
+        token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
+                                           client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
+    except:
+        os.remove(f".cache-{username}")
+        token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
+                                           client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
 
+    # Create Spotify instance
+    sp = spotipy.Spotify(auth=token)
 
+    # Get all artists which I follow
+    result = sp.current_user_followed_artists()
 
-# Get the token
-try:
-    token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
-                                       client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
-except:
-    os.remove(f".cache-{username}")
-    token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
-                                       client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
+    art_list = artists_list_from_json(result['artists']['items'], sp)
+    while result['artists']['next']:
+        result = sp.next(result['artists'])
+        art_list.extend(artists_list_from_json(result['artists']['items'], sp))
 
-# Create Spotify instance
-sp = spotipy.Spotify(auth=token)
+    # result = sp.current_user_followed_artists(after=None)
+    # result = sp.artist_albums('6zNJCgmbt1BbC9d9HWPaHx')  # Egor Nuts
+    # print(json.dumps(result, indent=4))
 
-# Get all artists which I follow
-result = sp.current_user_followed_artists()
-
-art_list = artists_list_from_json(result['artists']['items'], sp)
-
-# TEST
-# result = sp.artist_albums(art_list[0].artist_id, limit=50)
-# print(json.dumps(result, indent=4))
-
-print(len(art_list[0].get_albums(sp)))
-print(len(art_list[0].get_singles_or_eps(sp)))
-print(len(art_list[0].get_appears_on(sp)))
-print(len(art_list[0].get_compilations(sp)))
-pass
-
-
-
-
-
-
-"""
-print(json.dumps(result, indent=4))
-artists = result['artists']['items']
-while result['artists']['next']:
-    result = sp.next(result['artists'])
-    artists.extend(result['artists']['items'])
-"""
-
-
-
-
-# Get artist albums
-"""
-artist_albums = {}  # artist_id: albums_list
-for artist in artists:
-    result = sp.artist(artist['id'])
-    result = sp.artist_albums(artist['id'], limit=50)
-    print(json.dumps(result, indent=4))
-    artist_albums[artist['id']] = result['items']
-    tt = Album.album_from_json(result['items'][0])
-    print(tt.name)
-    while result['next']:
-        result = sp.next(result)
-        artist_albums[artist['id']].append(result['items'])
-    pprint.pprint(artist_albums[artist['id']])
-    pass
-pprint.pprint(artist_albums)
-"""
-
-
-
-# result = sp.current_user_followed_artists(after=None)
-# result = sp.artist_albums('6zNJCgmbt1BbC9d9HWPaHx')  # Egor Nuts
-# print(json.dumps(result, indent=4))
-
-# result = sp.album_tracks('2DRxLSdoLRmAOMMbe4UymY')
-# print(json.dumps(result, indent=4))
-
-# result = sp.artist_albums('718COspgdWOnwOFpJHRZHS')
-# print(json.dumps(result, indent=4))
+    check_updates(art_list)
