@@ -265,3 +265,4 @@ rss.xml
 server.log
 venv/
 *.cache-*
+spotify_conf.json

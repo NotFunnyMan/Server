@@ -2,17 +2,7 @@ import spotipy
 import spotipy.util as util
 import os
 import time
-# import json
-# import pprint
-
-username = 'pva55ddk3p2lm234s5yhh2dyl'
-scope = 'user-follow-read'
-
-SPOTIPY_CLIENT_ID = 'aeb7e5af5a5545b188741217cf2f447a'
-SPOTIPY_CLIENT_SECRET = '8788d5b6f2c243448698e5424e81b0ed'
-SPOTIPY_REDIRECT_URI = 'https://google.com/'
-
-DELAY_API_REQUEST = 1
+import json
 
 
 class Artist(object):
@@ -236,68 +226,114 @@ def albums_list_from_json(js):
     return [album_from_json(part) for part in js]
 
 
-def check_updates(artists_list):
-    for artist in artists_list:
-        album, single_ep, appears, compilation = artist.get_latest_compositions()
-        if album != artist.latest_album:
-            print('NEW ALBUM!\n')
-            last_10_albums = artist.get_albums(limit=10)
-            new_ones = last_10_albums[:last_10_albums.index(album)]
-            print('Artist:%s\nNew albums\n' % artist.name)
-            for ones in new_ones:
-                print('Name: %s' % ones.name)
-            artist.latest_album = album
-        if single_ep != artist.latest_single:
-            print('NEW SINGLE OR EP!\n')
-            last_10_single = artist.get_singles_or_eps(limit=10)
-            new_ones = last_10_single[:last_10_single.index(album)]
-            print('Artist:%s\nNew single or EP\n' % artist.name)
-            for ones in new_ones:
-                print('Name: %s' % ones.name)
-            artist.latest_single = single_ep
-        if appears != artist.latest_appears:
-            print('NEW APPEARS!\n')
-            last_10_appears = artist.get_albums(limit=10)
-            new_ones = last_10_appears[:last_10_appears.index(album)]
-            print('Artist:%s\nNew appears\n' % artist.name)
-            for ones in new_ones:
-                print('Name: %s' % ones.name)
-            artist.latest_appears = appears
-        if compilation != artist.latest_compilation:
-            print('NEW COMPILATION!\n')
-            last_10_compilations = artist.get_compilations(limit=10)
-            new_ones = last_10_compilations[:last_10_compilations.index(album)]
-            print('Artist:%s\nNew albums\n' % artist.name)
-            for ones in new_ones:
-                print('Name: %s' % ones.name)
-            artist.latest_compilation = compilation
-        time.sleep(DELAY_API_REQUEST)
-        print('TIME TO SLEEP....\n\n\n')
+def check_updates(init_art_list, curr_art_list, DELAY_API_REQUEST):
+    updates = []
+    for artist in curr_art_list:
+        if artist in init_art_list:
+            album, single_ep, appears, compilation = artist.get_latest_compositions()
+            init_artist = init_art_list[init_art_list.index(artist)]
+            if album != init_artist.latest_album:
+                print('NEW ALBUM!\n')
+                last_10_albums = artist.get_albums(limit=10)
+                new_ones = last_10_albums[:last_10_albums.index(init_artist.latest_album)]
+                updates.extend(new_ones)
+                print('Artist:%s\nNew albums\n' % artist.name)
+                for ones in new_ones:
+                    print('Name: %s' % ones.name)
+                artist.latest_album = album
+            if single_ep != init_artist.latest_single:
+                print('NEW SINGLE OR EP!\n')
+                last_10_single = artist.get_singles_or_eps(limit=10)
+                new_ones = last_10_single[:last_10_single.index(init_artist.latest_single)]
+                updates.extend(new_ones)
+                print('Artist:%s\nNew single or EP\n' % artist.name)
+                for ones in new_ones:
+                    print('Name: %s' % ones.name)
+                artist.latest_single = single_ep
+            if appears != init_artist.latest_appears:
+                print('NEW APPEARS!\n')
+                last_10_appears = artist.get_albums(limit=10)
+                new_ones = last_10_appears[:last_10_appears.index(init_artist.latest_appears)]
+                updates.extend(new_ones)
+                print('Artist:%s\nNew appears\n' % artist.name)
+                for ones in new_ones:
+                    print('Name: %s' % ones.name)
+                artist.latest_appears = appears
+            if compilation != init_artist.latest_compilation:
+                print('NEW COMPILATION!\n')
+                last_10_compilations = artist.get_compilations(limit=10)
+                new_ones = last_10_compilations[:last_10_compilations.index(init_artist.latest_compilation)]
+                updates.extend(new_ones)
+                print('Artist:%s\nNew albums\n' % artist.name)
+                for ones in new_ones:
+                    print('Name: %s' % ones.name)
+                artist.latest_compilation = compilation
+            time.sleep(DELAY_API_REQUEST)
+            print('TIME TO SLEEP....\n\n\n')
+    return updates
+
+
+def get_token(conf):
+    token = None
+    try:
+        token = util.prompt_for_user_token(conf['username'],
+                                           scope=conf['SPOTIPY_SCOPE'],
+                                           client_id=conf['SPOTIPY_CLIENT_ID'],
+                                           client_secret=conf['SPOTIPY_CLIENT_SECRET'],
+                                           redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+    except:
+        os.remove(f".cache-{conf['username']}")
+        token = util.prompt_for_user_token(conf['username'],
+                                           scope=conf['SPOTIPY_SCOPE'],
+                                           client_id=conf['SPOTIPY_CLIENT_ID'],
+                                           client_secret=conf['SPOTIPY_CLIENT_SECRET'],
+                                           redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+    finally:
+        return token
+
+
+def get_following_artists(spotify):
+    # Get all artists which I follow
+    result = spotify.current_user_followed_artists()
+    art_list = artists_list_from_json(result['artists']['items'], spotify)
+    while result['artists']['next']:
+        result = spotify.next(result['artists'])
+        art_list.extend(artists_list_from_json(result['artists']['items'], spotify))
+    return art_list
+
+
+def get_artists_list(conf):
+    token = get_token(conf)
+    spotify = spotipy.Spotify(auth=token)
+    return get_following_artists(spotify)
+
+
+def get_conf():
+    with open('../spotify_conf.json') as f:
+        return json.load(f)
+
+
+def main():
+    conf = get_conf()
+    init_artists_list = get_artists_list(conf)
+
+    while True:
+        try:
+            current_artists_list = get_artists_list(conf)
+            updates = check_updates(init_artists_list, current_artists_list, conf['DELAY_API_REQUEST'])
+            if updates:
+                pass
+            init_artists_list = current_artists_list
+            print('SLEEP DELAY_BTW_GET_UPDATES')
+            time.sleep(conf['DELAY_BTW_GET_UPDATES'])
+        except Exception as e:
+            print('EXCEPTION!\n%s' % e)
 
 
 if __name__ == '__main__':
-    # Get the token
-    try:
-        token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
-                                           client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
-    except:
-        os.remove(f".cache-{username}")
-        token = util.prompt_for_user_token(username, scope=scope, client_id=SPOTIPY_CLIENT_ID,
-                                           client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
-
-    # Create Spotify instance
-    sp = spotipy.Spotify(auth=token)
-
-    # Get all artists which I follow
-    result = sp.current_user_followed_artists()
-
-    art_list = artists_list_from_json(result['artists']['items'], sp)
-    while result['artists']['next']:
-        result = sp.next(result['artists'])
-        art_list.extend(artists_list_from_json(result['artists']['items'], sp))
-
     # result = sp.current_user_followed_artists(after=None)
     # result = sp.artist_albums('6zNJCgmbt1BbC9d9HWPaHx')  # Egor Nuts
     # print(json.dumps(result, indent=4))
+    main()
 
-    check_updates(art_list)
+
