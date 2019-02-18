@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger("Spotify")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("server.log")
+fh = logging.FileHandler("spotify.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -59,112 +59,39 @@ class Artist(object):
             Последний альбом по каждой из категории
         """
         logger.info('Getting a latest compositions for artist: %s...' % self.name)
-        return self.get_albums(limit=1)[0], self.get_singles_or_eps(limit=1)[0], \
-               self.get_appears_on(limit=1)[0], self.get_compilations(limit=1)[0]
+        res = []
+        composition_types = ['album', 'single', 'appears_on', 'compilation']
+        for composition in composition_types:
+            res.append(self.get_compositions(album_group=composition, limit=1)[0])
+        return res[0], res[1], res[2], res[3]
 
-    def get_albums(self, limit=None):
+    def get_compositions(self, album_group, limit=None):
         """
         Получение всех альбомов артиста
 
         :params
-            limit: количество альбомов для возврата (None - все)
+            album_group: один из типов: 'album', 'single', 'appears_on' или 'compilation'
+            limit: количество композиций для возврата (None - все)
         :return:
-            Список альбомов
+            Удача: список композиций
+            Ошибка: пустой список
         """
+
+        logger.info('Getting %s "%s"' % (str(limit) if limit is not None else 'all',  album_group))
+        artist_compositions = []
         try:
-            logger.info('Getting %s albums' % str(limit) if limit is not None else 'all')
-            albums = self.connector.artist_albums(self.artist_id, album_type='album', limit=limit)
-            artist_albums = albums_list_from_json(albums['items'])
-            if limit is None:
-                limit = albums['total']
-            while albums['next']:
-                if len(artist_albums) < limit:
-                    albums = self.connector.next(albums)
-                    artist_albums.append(albums['items'])
-                elif len(artist_albums) >= limit:
-                    return artist_albums[:limit]
+            compositions = self.connector.artist_albums(self.artist_id, album_type=album_group)
+            artist_compositions.append(albums_list_from_json(compositions['items']))
+            while compositions['next']:
+                if len(artist_compositions) < limit:
+                    compositions = self.connector.next(compositions)
+                    artist_compositions.append(compositions['items'])
+                elif len(artist_compositions) >= limit:
+                    return artist_compositions[:limit]
         except Exception as e:
-            logger.error('Cannot get the albums!\n%s' % e)
-            return [Album('', '', '', '', '', '', '', '')]
-        return [Album('', '', '', '', '', '', '', '')] if len(artist_albums) == 0 else artist_albums
-
-    def get_singles_or_eps(self, limit=None):
-        """
-        Получение всех синглов или EP артиста
-
-        :params
-            limit: количество альбомов для возврата (None - все)
-        :return:
-            Список синглов или EP
-        """
-        try:
-            logger.info('Getting %s singles or EPs' % str(limit) if limit is not None else 'all')
-            singles_eps = self.connector.artist_albums(self.artist_id, album_type='single')
-            artist_singles = albums_list_from_json(singles_eps['items'])
-            if limit is None:
-                limit = singles_eps['total']
-            while singles_eps['next']:
-                if len(artist_singles) < limit:
-                    singles_eps = self.connector.next(singles_eps)
-                    artist_singles.append(singles_eps['items'])
-                elif len(artist_singles) >= limit:
-                    return artist_singles[:limit]
-        except Exception as e:
-            logger.error('Cannot get the single or EP!\n%s' % e)
-            return [Album('', '', '', '', '', '', '', '')]
-        return [Album('', '', '', '', '', '', '', '')] if len(artist_singles) == 0 else artist_singles
-
-    def get_appears_on(self, limit=None):
-        """
-        Получение всех произведений, где упомянается артист
-
-        :params
-            limit: количество альбомов для возврата (None - все)
-        :return:
-            Список произведений
-        """
-        try:
-            logger.info('Getting %s appears on' % str(limit) if limit is not None else 'all')
-            appears = self.connector.artist_albums(self.artist_id, album_type='appears_on')
-            artist_appears = albums_list_from_json(appears['items'])
-            if limit is None:
-                limit = appears['total']
-            while appears['next']:
-                if len(artist_appears) < limit:
-                    appears = self.connector.next(appears)
-                    artist_appears.append(appears['items'])
-                elif len(artist_appears) >= limit:
-                    return artist_appears[:limit]
-        except Exception as e:
-            logger.error('Cannot get the appears on!\n%s' % e)
-            return [Album('', '', '', '', '', '', '', '')]
-        return [Album('', '', '', '', '', '', '', '')] if len(artist_appears) == 0 else artist_appears
-
-    def get_compilations(self, limit=None):
-        """
-        Получение всех подборок с артистом
-
-        :params
-            limit: количество альбомов для возврата (None - все)
-        :return:
-            Список подборок
-        """
-        try:
-            logger.info('Getting %s compilations' % str(limit) if limit is not None else 'all')
-            compilations = self.connector.artist_albums(self.artist_id, album_type='compilation')
-            artist_compilations = albums_list_from_json(compilations['items'])
-            if limit is None:
-                limit = compilations['total']
-            while compilations['next']:
-                if len(artist_compilations) < limit:
-                    compilations = self.connector.next(compilations)
-                    artist_compilations.append(compilations['items'])
-                elif len(artist_compilations) >= limit:
-                    return artist_compilations[:limit]
-        except Exception as e:
-            logger.error('Cannot get the compilation!\n%s' % e)
-            return [Album('', '', '', '', '', '', '', '')]
-        return [Album('', '', '', '', '', '', '', '')] if len(artist_compilations) == 0 else artist_compilations
+            logger.error('Cannot get the %s!\n%s' % (album_group, e))
+            return []
+        return artist_compositions
 
 
 def artist_from_json(js, spotify):
