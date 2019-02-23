@@ -4,8 +4,9 @@ import spotipy.util as util
 import spotipy.oauth2 as oauth2
 import os
 import time
-# import json
+import json
 # import pprint
+import time
 
 username = 'pva55ddk3p2lm234s5yhh2dyl'
 scope = 'user-follow-read'
@@ -18,16 +19,54 @@ DELAY_API_REQUEST = 1
 DELAY_BTW_GET_UPDATES = 300
 
 
+def get_conf():
+    try:
+        with open('spotify_conf.json') as f:
+            return json.load(f)
+    except Exception as e:
+        print(e)
 
-test = oauth2.SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=scope)
 
-# Create Spotify instance
-auth_url = test.get_authorize_url()
-res = requests.post(auth_url, allow_redirects=True)
-resp_code = test.parse_response_code(auth_url)
-token = test.get_access_token(resp_code)
+conf = get_conf()
 
-sp = spotipy.Spotify(auth=token['access_token'])
-result = sp.current_user_followed_artists()
-print(result)
+
+def get_compositions(artist_id, album_group, connector, limit=None):
+    artist_compositions = []
+    try:
+        compositions = connector.artist_albums(artist_id, album_type=album_group)
+        artist_compositions.extend(compositions['items'])
+        if limit is None:
+            limit = compositions['total']
+        while compositions['next']:
+            if len(artist_compositions) < limit:
+                compositions = connector.next(compositions)
+                artist_compositions.extend(compositions['items'])
+            elif len(artist_compositions) >= limit:
+                return artist_compositions[:limit]
+    except Exception as e:
+        print(e)
+    return artist_compositions[:limit]
+
+
+try:
+    token = util.prompt_for_user_token(username,
+                                   scope=conf['SPOTIPY_SCOPE'],
+                                   client_id=conf['SPOTIPY_CLIENT_ID'],
+                                   client_secret=conf['SPOTIPY_CLIENT_SECRET'],
+                                   redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+except Exception as e:
+    os.remove(f".cache-{username}")
+    token = util.prompt_for_user_token(username,
+                                       scope=conf['SPOTIPY_SCOPE'],
+                                       client_id=conf['SPOTIPY_CLIENT_ID'],
+                                       client_secret=conf['SPOTIPY_CLIENT_SECRET'],
+                                       redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+
+sp = spotipy.Spotify(auth=token)
+
+start_time = time.time()
+test = get_compositions(artist_id='22bE4uQ6baNwSHPVcDxLCe', album_group='album', limit=1000, connector=sp)
+print(time.time() - start_time)
+print(len(test))
+
 
