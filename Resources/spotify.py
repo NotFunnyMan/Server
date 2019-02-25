@@ -105,7 +105,7 @@ class Artist(object):
                 else:
                     break
         except Exception as e:
-            logger.error('Cannot get the %s!\n%s' % (album_group, e))
+            logger.exception('Cannot get the %s!' % album_group)
             return []
         return artist_compositions[:limit]
 
@@ -212,7 +212,7 @@ class User(object):
                                                client_secret=conf['SPOTIPY_CLIENT_SECRET'],
                                                redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
         except Exception as e:
-            logger.error('Cannot get a token! Trying to remove cache-file and try again!\n%s' % e)
+            logger.exception('Cannot get a token! Trying to remove cache-file and try again!')
             os.remove(f".cache-{self.username}")
             token = util.prompt_for_user_token(self.username,
                                                scope=conf['SPOTIPY_SCOPE'],
@@ -237,52 +237,58 @@ class User(object):
                 self.token = self.get_token()
                 self.get_following_artists()
         except Exception as e:
-            logger.error('Cannot get following artists!\n%s' % e)
+            logger.exception('Cannot get following artists!')
 
     def check_updates(self, init_art_list):
         updates = []
         current_artists_list = self.get_following_artists()
         logger.info('Checking any updates...')
-        for artist in current_artists_list:
-            if artist in init_art_list:
-                album, single_ep, appears, compilation = artist.get_latest_compositions()
-                #init_artist = init_art_list[init_art_list.index(artist)]
-                if album != artist.latest_album:
-                    logger.info('New album!')
-                    last_10_albums = artist.get_compositions(limit=10, album_group='album')
-                    new_ones = last_10_albums[:last_10_albums.index(artist.latest_album)]
-                    updates.extend(new_ones)
-                    logger.info('Artist:%s\nNew albums\n' % artist.name)
-                    for ones in new_ones:
-                        logger.info('Name: %s' % ones.name)
-                    artist.latest_album = album
-                if single_ep != artist.latest_single:
-                    logger.info('New sing or EP!')
-                    last_10_single = artist.get_compositions(limit=10, album_group='single')
-                    new_ones = last_10_single[:last_10_single.index(artist.latest_single)]
-                    updates.extend(new_ones)
-                    logger.info('Artist:%s\nNew single or EP\n' % artist.name)
-                    for ones in new_ones:
-                        logger.info('Name: %s' % ones.name)
-                    artist.latest_single = single_ep
-                if appears != artist.latest_appears:
-                    logger.info('New appears!\n')
-                    last_10_appears = artist.get_compositions(limit=10, album_group='appears_on')
-                    new_ones = last_10_appears[:last_10_appears.index(artist.latest_appears)]
-                    updates.extend(new_ones)
-                    logger.info('Artist:%s\nNew appears\n' % artist.name)
-                    for ones in new_ones:
-                        logger.info('Name: %s' % ones.name)
-                    artist.latest_appears = appears
-                if compilation != artist.latest_compilation:
-                    logger.info('New compilation!\n')
-                    last_10_compilations = artist.get_compositions(limit=10, album_group='compilation')
-                    new_ones = last_10_compilations[:last_10_compilations.index(artist.latest_compilation)]
-                    updates.extend(new_ones)
-                    logger.info('Artist:%s\nNew albums\n' % artist.name)
-                    for ones in new_ones:
-                        logger.info('Name: %s' % ones.name)
-                    artist.latest_compilation = compilation
+        for new_artist in current_artists_list:
+            if new_artist in init_art_list:
+                try:
+                    init_artist = init_art_list[init_art_list.index(new_artist)]
+                    if new_artist.latest_album != init_artist.latest_album:
+                        logger.info('New album!')
+                        last_10_albums = new_artist.get_compositions(limit=10, album_group='album')
+                        new_ones = last_10_albums[:last_10_albums.index(new_artist.latest_album)]
+                        updates.extend(new_ones)
+                        logger.info('Artist:%s\nNew albums\n' % new_artist.name)
+                        for ones in new_ones:
+                            logger.info('Name: %s' % ones.name)
+
+                    if new_artist.latest_single != init_artist.latest_single:
+                        logger.info('New sing or EP!')
+                        last_10_single = new_artist.get_compositions(limit=10, album_group='single')
+                        new_ones = last_10_single[:last_10_single.index(new_artist.latest_single)]
+                        updates.extend(new_ones)
+                        logger.info('Artist:%s\nNew single or EP\n' % new_artist.name)
+                        for ones in new_ones:
+                            logger.info('Name: %s' % ones.name)
+
+                    if new_artist.latest_appears != init_artist.latest_appears:
+                        logger.info('New appears!\n')
+                        last_10_appears = new_artist.get_compositions(limit=10, album_group='appears_on')
+                        new_ones = last_10_appears[:last_10_appears.index(new_artist.latest_appears)]
+                        updates.extend(new_ones)
+                        logger.info('Artist:%s\nNew appears\n' % new_artist.name)
+                        for ones in new_ones:
+                            logger.info('Name: %s' % ones.name)
+
+                    if new_artist.latest_compilation != init_artist.latest_compilation:
+                        logger.info('New compilation!\n')
+                        last_10_compilations = new_artist.get_compositions(limit=10, album_group='compilation')
+                        new_ones = last_10_compilations[:last_10_compilations.index(new_artist.latest_compilation)]
+                        updates.extend(new_ones)
+                        logger.info('Artist:%s\nNew albums\n' % new_artist.name)
+                        for ones in new_ones:
+                            logger.info('Name: %s' % ones.name)
+                except HTTPError as httperror:
+                    logger.error("I caught the HTTPError\n%s" % httperror)
+                    if httperror.response.status_code == 401:
+                        logger.debug("Token was expired... Attempt to refresh the token and retry action")
+                        self.token = self.get_token()
+                except Exception as e:
+                    logger.exception('Cannot get following artists!')
                 logger.info('Time to sleep....')
                 time.sleep(conf['DELAY_API_REQUEST'])
         return updates, current_artists_list
@@ -296,13 +302,13 @@ def main():
 
     while True:
         try:
-            # logger.info('Sleep DELAY_BTW_GET_UPDATES...')
-            # time.sleep(conf['DELAY_BTW_GET_UPDATES'])
+            logger.info('Sleep DELAY_BTW_GET_UPDATES...')
+            time.sleep(conf['DELAY_BTW_GET_UPDATES'])
             updates, init_artists_list = me.check_updates(init_artists_list)
             if updates:
                 logger.info('We got any updates!')
         except Exception as e:
-            logger.error('Exception in main loop!\n%s' % e)
+            logger.exception('Exception in main loop!')
 
 
 if __name__ == '__main__':
