@@ -4,7 +4,7 @@ import os
 import time
 import json
 import logging
-from requests.exceptions import HTTPError
+from spotipy.client import SpotifyException
 
 logger = logging.getLogger("Spotify")
 logger.setLevel(logging.DEBUG)
@@ -20,7 +20,7 @@ def get_conf():
         with open('../spotify_conf.json') as f:
             return json.load(f)
     except Exception as e:
-        logger.error('Cannot read json config!\n%s' % e)
+        logger.exception('Cannot read json config!')
 
 
 conf = get_conf()
@@ -104,10 +104,15 @@ class Artist(object):
                     artist_compositions.append(compositions['items'])
                 else:
                     break
+            return artist_compositions[:limit]
+        except SpotifyException as e:
+            logger.exception("I caught the HTTPError\n%s" % e)
+            if e.http_status == 401:
+                logger.debug("Token was expired... Attempt to refresh the token and retry action")
+                pass
         except Exception as e:
-            logger.exception('Cannot get the %s!' % album_group)
-            return []
-        return artist_compositions[:limit]
+            logger.error('Cannot get the %s!' % album_group)
+            logger.exception('Cannot get the %s!')
 
 
 def artist_from_json(js, spotify):
@@ -230,9 +235,9 @@ class User(object):
                 result = self.token.next(result['artists'])
                 art_list.extend(artists_list_from_json(result['artists']['items'], self.token))
             return art_list
-        except HTTPError as httperror:
-            logger.error("I caught the HTTPError\n%s" % httperror)
-            if httperror.response.status_code == 401:
+        except SpotifyException as e:
+            logger.exception("I caught the HTTPError\n%s" % e)
+            if e.http_status == 401:
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
                 self.token = self.get_token()
                 self.get_following_artists()
@@ -243,9 +248,9 @@ class User(object):
         updates = []
         current_artists_list = self.get_following_artists()
         logger.info('Checking any updates...')
-        for new_artist in current_artists_list:
-            if new_artist in init_art_list:
-                try:
+        try:
+            for new_artist in current_artists_list:
+                if new_artist in init_art_list:
                     init_artist = init_art_list[init_art_list.index(new_artist)]
                     if new_artist.latest_album != init_artist.latest_album:
                         logger.info('New album!')
@@ -282,16 +287,14 @@ class User(object):
                         logger.info('Artist:%s\nNew albums\n' % new_artist.name)
                         for ones in new_ones:
                             logger.info('Name: %s' % ones.name)
-                except HTTPError as httperror:
-                    logger.error("I caught the HTTPError\n%s" % httperror)
-                    if httperror.response.status_code == 401:
-                        logger.debug("Token was expired... Attempt to refresh the token and retry action")
-                        self.token = self.get_token()
-                except Exception as e:
-                    logger.exception('Cannot get following artists!')
-                logger.info('Time to sleep....')
-                time.sleep(conf['DELAY_API_REQUEST'])
-        return updates, current_artists_list
+            return updates, current_artists_list
+        except SpotifyException as e:
+            logger.exception("I caught the HTTPError\n%s" % e)
+            if e.http_status == 401:
+                logger.debug("Token was expired... Attempt to refresh the token and retry action")
+                self.token = self.get_token()
+        except Exception as e:
+                logger.exception('Cannot get following artists!')
 
 
 def main():
