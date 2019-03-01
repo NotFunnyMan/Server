@@ -261,8 +261,7 @@ __pycache__/
 *.pyc
 
 # My files
-rss.xml
-server.log
 venv/
-*.cache-*
-spotify_conf.json
+Confs/
+Logs/
+Cache/

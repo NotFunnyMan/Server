@@ -8,7 +8,7 @@ from spotipy.client import SpotifyException
 
 logger = logging.getLogger("Spotify")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("spotify.log")
+fh = logging.FileHandler("../Logs/spotify.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -17,10 +17,11 @@ logger.addHandler(fh)
 def get_conf():
     logger.info('Reading a json configuration file...')
     try:
-        with open('../spotify_conf.json') as f:
+        file_path = '../Confs/spotify_conf.json' if conf["PLATFORM"] == 'Win' else 'spotify_conf.json'
+        with open(file_path) as f:
             return json.load(f)
     except Exception as e:
-        logger.exception('Cannot read json config!')
+        logger.exception('Cannot read json config!\n%s' % e)
 
 
 conf = get_conf()
@@ -111,7 +112,7 @@ class Artist(object):
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
                 pass
         except Exception as e:
-            logger.error('Cannot get the %s!' % album_group)
+            logger.error('Cannot get the %s!\n%s' % (album_group, e))
             logger.exception('Cannot get the %s!')
 
 
@@ -242,7 +243,7 @@ class User(object):
                 self.token = self.get_token()
                 self.get_following_artists()
         except Exception as e:
-            logger.exception('Cannot get following artists!')
+            logger.exception('Cannot get following artists!\n%s' % e)
 
     def check_updates(self, init_art_list):
         updates = []
@@ -294,7 +295,7 @@ class User(object):
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
                 self.token = self.get_token()
         except Exception as e:
-                logger.exception('Cannot get following artists!')
+                logger.exception('Cannot get following artists!\n%s' % e)
 
 
 def main():
@@ -311,7 +312,7 @@ def main():
             if updates:
                 logger.info('We got any updates!')
         except Exception as e:
-            logger.exception('Exception in main loop!')
+            logger.exception('Exception in main loop!\n%s' % e)
 
 
 if __name__ == '__main__':

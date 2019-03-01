@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("server.log")
+fh = logging.FileHandler("../Logs/server.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
