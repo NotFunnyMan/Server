@@ -5,6 +5,7 @@ import time
 import json
 import logging
 from spotipy.client import SpotifyException
+import platform
 
 logger = logging.getLogger("Spotify")
 logger.setLevel(logging.DEBUG)
@@ -17,7 +18,7 @@ logger.addHandler(fh)
 def get_conf():
     logger.info('Reading a json configuration file...')
     try:
-        file_path = '../Confs/spotify_conf.json' if conf["PLATFORM"] == 'Win' else 'spotify_conf.json'
+        file_path = '../Confs/spotify_conf.json' if platform.system() == 'Windows' else 'spotify_conf.json'
         with open(file_path) as f:
             return json.load(f)
     except Exception as e:
@@ -216,15 +217,17 @@ class User(object):
                                                scope=conf['SPOTIPY_SCOPE'],
                                                client_id=conf['SPOTIPY_CLIENT_ID'],
                                                client_secret=conf['SPOTIPY_CLIENT_SECRET'],
-                                               redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+                                               redirect_uri=conf['SPOTIPY_REDIRECT_URI'],
+                                               cache_path=conf['CACHE_PATH'] + ".cache-" + self.username)
         except Exception as e:
             logger.exception('Cannot get a token! Trying to remove cache-file and try again!')
-            os.remove(f".cache-{self.username}")
+            os.remove(f"{conf['CACHE_PATH']} + .cache-{self.username}")
             token = util.prompt_for_user_token(self.username,
                                                scope=conf['SPOTIPY_SCOPE'],
                                                client_id=conf['SPOTIPY_CLIENT_ID'],
                                                client_secret=conf['SPOTIPY_CLIENT_SECRET'],
-                                               redirect_uri=conf['SPOTIPY_REDIRECT_URI'])
+                                               redirect_uri=conf['SPOTIPY_REDIRECT_URI'],
+                                               cache_path=conf['CACHE_PATH'] + ".cache-" + self.username)
         return token
 
     def get_following_artists(self):
@@ -240,16 +243,16 @@ class User(object):
             logger.exception("I caught the HTTPError\n%s" % e)
             if e.http_status == 401:
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
-                self.token = self.get_token()
+                self.token = spotipy.Spotify(auth=self.get_token())
                 self.get_following_artists()
         except Exception as e:
             logger.exception('Cannot get following artists!\n%s' % e)
 
     def check_updates(self, init_art_list):
         updates = []
-        current_artists_list = self.get_following_artists()
         logger.info('Checking any updates...')
         try:
+            current_artists_list = self.get_following_artists()
             for new_artist in current_artists_list:
                 if new_artist in init_art_list:
                     init_artist = init_art_list[init_art_list.index(new_artist)]
@@ -293,7 +296,7 @@ class User(object):
             logger.exception("I caught the HTTPError\n%s" % e)
             if e.http_status == 401:
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
-                self.token = self.get_token()
+                self.token = spotipy.Spotify(auth=self.get_token())
         except Exception as e:
                 logger.exception('Cannot get following artists!\n%s' % e)
 
