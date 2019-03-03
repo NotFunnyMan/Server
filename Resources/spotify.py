@@ -9,16 +9,26 @@ import platform
 
 logger = logging.getLogger("Spotify")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("../Logs/spotify.log")
+fh = logging.FileHandler("../Logs/spotify.log") if platform.system() == 'Windows' else logging.FileHandler("Logs/spotify.log")
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
+def benchmark(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        res = func(*args, **kwargs)
+        logger.info("%s. Time spent: %s" % (func.__name__, time.time() - start))
+        return res
+    return wrapper
+
+
+@benchmark
 def get_conf():
     logger.info('Reading a json configuration file...')
     try:
-        file_path = '../Confs/spotify_conf.json' if platform.system() == 'Windows' else 'spotify_conf.json'
+        file_path = '../Confs/spotify_conf.json' if platform.system() == 'Windows' else 'Confs/spotify_conf.json'
         with open(file_path) as f:
             return json.load(f)
     except Exception as e:
@@ -206,10 +216,12 @@ class User(object):
     username - имя пользователя
     token - токен для работы с пользователем
     """
+
     def __init__(self, username):
         self.username = username
         self.token = spotipy.Spotify(auth=self.get_token())
 
+    @benchmark
     def get_token(self):
         logger.info('Creating a token...')
         try:
@@ -230,6 +242,7 @@ class User(object):
                                                cache_path=conf['CACHE_PATH'] + ".cache-" + self.username)
         return token
 
+    @benchmark
     def get_following_artists(self):
         logger.info('Getting follow artists...')
         try:
@@ -248,6 +261,7 @@ class User(object):
         except Exception as e:
             logger.exception('Cannot get following artists!\n%s' % e)
 
+    @benchmark
     def check_updates(self, init_art_list):
         updates = []
         logger.info('Checking any updates...')
@@ -297,8 +311,11 @@ class User(object):
             if e.http_status == 401:
                 logger.debug("Token was expired... Attempt to refresh the token and retry action")
                 self.token = spotipy.Spotify(auth=self.get_token())
+                updates, current_artists_list = self.check_updates(init_art_list)
+                return updates, current_artists_list
         except Exception as e:
-                logger.exception('Cannot get following artists!\n%s' % e)
+            logger.exception('Cannot get following artists!\n%s' % e)
+            return [], init_art_list
 
 
 def main():
