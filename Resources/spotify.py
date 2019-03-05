@@ -1,10 +1,10 @@
 import spotipy
 import spotipy.util as util
+from spotipy.client import SpotifyException
 import os
 import time
 import json
 import logging
-from spotipy.client import SpotifyException
 import platform
 
 logger = logging.getLogger("Spotify")
@@ -261,50 +261,49 @@ class User(object):
         except Exception as e:
             logger.exception('Cannot get following artists!\n%s' % e)
 
+    @staticmethod
+    def _get_updates(new_artist, album_group, init_composition):
+        updates = []
+        last_ten_compositions = new_artist.get_compositions(limit=10, album_group=album_group)
+        if album_group == 'album':
+            logger.info('New album!')
+            updates = last_ten_compositions[:last_ten_compositions.index(init_composition)]
+        elif album_group == 'single':
+            logger.info('New single or EP!')
+            updates = last_ten_compositions[:last_ten_compositions.index(init_composition)]
+        elif album_group == 'appears_on':
+            logger.info('New appearance!')
+            updates = last_ten_compositions[:last_ten_compositions.index(init_composition)]
+        elif album_group == 'compilation':
+            logger.info('New compilation!')
+            updates = last_ten_compositions[:last_ten_compositions.index(init_composition)]
+
+        logger.info('Artist:%s\nNew %s\n' % (new_artist.name, album_group))
+        for update in updates:
+            logger.info('Name: %s' % update.name)
+        return updates
+
     @benchmark
     def check_updates(self, init_art_list):
         updates = []
         logger.info('Checking any updates...')
         try:
             current_artists_list = self.get_following_artists()
-            for new_artist in current_artists_list:
-                if new_artist in init_art_list:
-                    init_artist = init_art_list[init_art_list.index(new_artist)]
-                    if new_artist.latest_album != init_artist.latest_album:
-                        logger.info('New album!')
-                        last_10_albums = new_artist.get_compositions(limit=10, album_group='album')
-                        new_ones = last_10_albums[:last_10_albums.index(new_artist.latest_album)]
-                        updates.extend(new_ones)
-                        logger.info('Artist:%s\nNew albums\n' % new_artist.name)
-                        for ones in new_ones:
-                            logger.info('Name: %s' % ones.name)
+            for artist in current_artists_list:
+                if artist in init_art_list:
+                    init_artist = init_art_list[init_art_list.index(artist)]
+                    if artist.latest_album != init_artist.latest_album:
+                        updates = self._get_updates(artist, 'album', init_artist.latest_album)
 
-                    if new_artist.latest_single != init_artist.latest_single:
-                        logger.info('New sing or EP!')
-                        last_10_single = new_artist.get_compositions(limit=10, album_group='single')
-                        new_ones = last_10_single[:last_10_single.index(new_artist.latest_single)]
-                        updates.extend(new_ones)
-                        logger.info('Artist:%s\nNew single or EP\n' % new_artist.name)
-                        for ones in new_ones:
-                            logger.info('Name: %s' % ones.name)
+                    if artist.latest_single != init_artist.latest_single:
+                        updates = self._get_updates(artist, 'single', init_artist.latest_single)
 
-                    if new_artist.latest_appears != init_artist.latest_appears:
-                        logger.info('New appears!\n')
-                        last_10_appears = new_artist.get_compositions(limit=10, album_group='appears_on')
-                        new_ones = last_10_appears[:last_10_appears.index(new_artist.latest_appears)]
-                        updates.extend(new_ones)
-                        logger.info('Artist:%s\nNew appears\n' % new_artist.name)
-                        for ones in new_ones:
-                            logger.info('Name: %s' % ones.name)
+                    if artist.latest_appears != init_artist.latest_appears:
+                        updates = self._get_updates(artist, 'appears_on', init_artist.latest_appears)
 
-                    if new_artist.latest_compilation != init_artist.latest_compilation:
-                        logger.info('New compilation!\n')
-                        last_10_compilations = new_artist.get_compositions(limit=10, album_group='compilation')
-                        new_ones = last_10_compilations[:last_10_compilations.index(new_artist.latest_compilation)]
-                        updates.extend(new_ones)
-                        logger.info('Artist:%s\nNew albums\n' % new_artist.name)
-                        for ones in new_ones:
-                            logger.info('Name: %s' % ones.name)
+                    if artist.latest_compilation != init_artist.latest_compilation:
+                        updates = self._get_updates(artist, 'compilation', init_artist.latest_compilation)
+
             return updates, current_artists_list
         except SpotifyException as e:
             logger.exception("I caught the HTTPError\n%s" % e)
