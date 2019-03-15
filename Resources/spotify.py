@@ -15,6 +15,36 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
+class Artist(object):
+    def __init__(self, artist_id, artist_uri, followers_total, name, genre, url, images):
+        self.artist_id = artist_id
+        self.artist_uri = artist_uri
+        self.followers_total = followers_total
+        self.name = name
+        self.genre = genre
+        self.url = url
+        self.images = images
+        self.latest_album, self.latest_single, self.latest_appears, self.latest_compilation = None, None, None, None
+
+    def __eq__(self, other):
+        return self.artist_id == other.artist_id
+
+
+class Album(object):
+    def __init__(self, album_id, album_uri, album_type, name, total_tracks, release_date, link, images):
+        self.album_id = album_id
+        self.album_uri = album_uri
+        self.album_type = album_type
+        self.name = name
+        self.total_tracks = total_tracks
+        self.release_date = release_date
+        self.link = link
+        self.images = images
+
+    def __eq__(self, other):
+        return self.album_id == other.album_id
+
+
 def benchmark(func):
     def wrapper(*args, **kwargs):
         start = time.time()
@@ -35,191 +65,12 @@ def get_conf():
         logger.exception('Cannot read json config!\n%s' % e)
 
 
-conf = get_conf()
-
-
-class Artist(object):
-    """
-    Класс описывает объект Артист
-
-    artist_id - id артиста
-    uri - uri артиста
-    followers_total - количество фолловеров
-    name - имя артиста
-    genre - список жанров артиста
-    url - ссылка на профиль артиста
-    images - список аватаров артиста разных размеров
-    spotify - объект типа spotipy.Spotify
-
-    latest_album - последний альбом
-    latest_single - последний сингл или EP
-    latest_appears - последняя композиция, где артист упоминается
-    latest_compilation - последняя подборка
-    """
-
-    def __init__(self, artist_id, artist_uri, followers_total, name, genre, url, images, spotify):
-        self.artist_id = artist_id
-        self.artist_uri = artist_uri
-        self.followers_total = followers_total
-        self.name = name
-        self.genre = genre
-        self.url = url
-        self.images = images
-        self.connector = spotify
-        self.latest_album, self.latest_single, self.latest_appears, self.latest_compilation = \
-            self.get_latest_compositions()
-
-    def __eq__(self, other):
-        return self.artist_id == other.artist_id
-
-    def get_latest_compositions(self):
-        """
-        Получение по последней композиции по каждой из категории:
-        album - альбом
-        single_ep - сингл или EP
-        appears_on - совместный трек с другим артистом
-        compilation - подборка из треков
-
-        :return:
-            Последний альбом по каждой из категории
-        """
-        logger.info('Getting a latest compositions for artist: %s...' % self.name)
-        res = []
-        composition_types = ['album', 'single', 'appears_on', 'compilation']
-        for composition in composition_types:
-            compos = self.get_compositions(album_group=composition, limit=1)
-            res.append(compos if len(compos) != 0 else [None])
-        return res[0][0], res[1][0], res[2][0], res[3][0]
-
-    def get_compositions(self, album_group, limit=None):
-        """
-        Получение всех альбомов артиста
-
-        :params
-            album_group: один из типов: 'album', 'single', 'appears_on' или 'compilation'
-            limit: количество композиций для возврата (None - все)
-        :return:
-            Удача: список композиций
-            Ошибка: пустой список
-        """
-
-        logger.info('Getting %s "%s"' % (str(limit) if limit is not None else 'all',  album_group))
-        artist_compositions = []
-        try:
-            compositions = self.connector.artist_albums(self.artist_id, album_type=album_group)
-            artist_compositions.extend(albums_list_from_json(compositions['items']))
-            if limit is None:
-                limit = compositions['total']
-            while compositions['next']:
-                if len(artist_compositions) < limit:
-                    compositions = self.connector.next(compositions)
-                    artist_compositions.append(compositions['items'])
-                else:
-                    break
-            return artist_compositions[:limit]
-        except SpotifyException as e:
-            logger.exception("I caught the HTTPError\n%s" % e)
-            if e.http_status == 401:
-                logger.debug("Token was expired... Attempt to refresh the token and retry action")
-                pass
-        except Exception as e:
-            logger.error('Cannot get the %s!\n%s' % (album_group, e))
-            logger.exception('Cannot get the %s!')
-
-
-def artist_from_json(js, spotify):
-    """
-    Создание класса Артист из фрагмента json
-
-    :params
-        js: json-фрагмент
-        spotify: объект типа spotipy.Spotify
-    :return
-        класс Артист
-    """
-    return Artist(js['id'], js['uri'], js['followers']['total'],
-                  js['name'], js['genres'], js['external_urls']['spotify'], js['images'], spotify)
-
-
-def artists_list_from_json(js, spotify):
-    """
-    Создание списка объектов класса Артист из списка json
-    :param
-        js: json-объект
-    :return:
-        Список объектов Артист из списка json
-    """
-    return [artist_from_json(part, spotify) for part in js]
-
-
-class Album(object):
-    """
-    Класс описывает объект Альбом
-
-    album_id - id альбома
-    album_uri - uri альбома
-    album_type - тип альбома (album, single_ep, appears_on, compilation)
-    name - название альбома
-    total_tracks - количество треков в альбоме
-    release_date - дата выхода
-    link - ссылка на альбом
-    images - список ссылок на обложки альбома разных размеров
-    """
-
-    def __init__(self, album_id, album_uri, album_type, name, total_tracks, release_date, link, images):
-        self.album_id = album_id
-        self.album_uri = album_uri
-        self.album_type = album_type
-        self.name = name
-        self.total_tracks = total_tracks
-        self.release_date = release_date
-        self.link = link
-        self.images = images
-
-    def __eq__(self, other):
-        return self.album_id == other.album_id
-
-    @staticmethod
-    def album_from_json(js):
-        return Album(js['id'], js['uri'], js['album_type'], js['name'],
-                     js['total_tracks'], js['release_date'], js['external_urls']['spotify'], js['images'])
-
-
-def album_from_json(js):
-    """
-    Создание класса Альбом из фрагмента json
-
-    :params
-        js: json-фрагмент
-    :return
-        класс Альбом
-    """
-    return Album(js['id'], js['uri'], js['album_type'], js['name'], js['total_tracks'], js['release_date'],
-                 js['external_urls']['spotify'], js['images'])
-
-
-def albums_list_from_json(js):
-    """
-    Создание списка объектов класса Альбом из списка json
-    :param
-        js: json-объект
-    :return:
-        Список объектов Альбом из списка json
-    """
-    return [album_from_json(part) for part in js]
-
-
 class User(object):
-    """
-    Класс описывает объект User
-
-    username - имя пользователя
-    token - токен для работы с пользователем
-    """
 
     def __init__(self, username):
         self.username = username
         self.token = spotipy.Spotify(auth=self.get_token())
+        self.artists = self._filling_artists_with_albums(self.get_following_artists())
 
     @benchmark
     def get_token(self):
@@ -242,15 +93,29 @@ class User(object):
                                                cache_path=conf['CACHE_PATH'] + ".cache-" + self.username)
         return token
 
+    def _artist_from_json(self, js):
+        return Artist(js['id'], js['uri'], js['followers']['total'],
+                      js['name'], js['genres'], js['external_urls']['spotify'], js['images'])
+
+    def _artists_list_from_json(self, js):
+        return [self._artist_from_json(part) for part in js]
+
+    def _album_from_json(self, js):
+        return Album(js['id'], js['uri'], js['album_type'], js['name'], js['total_tracks'], js['release_date'],
+                     js['external_urls']['spotify'], js['images'])
+
+    def _albums_list_from_json(self, js):
+        return [self._album_from_json(part) for part in js]
+
     @benchmark
     def get_following_artists(self):
         logger.info('Getting follow artists...')
         try:
             result = self.token.current_user_followed_artists()
-            art_list = artists_list_from_json(result['artists']['items'], self.token)
+            art_list = self._artists_list_from_json(result['artists']['items'])
             while result['artists']['next']:
                 result = self.token.next(result['artists'])
-                art_list.extend(artists_list_from_json(result['artists']['items'], self.token))
+                art_list.extend(self._artists_list_from_json(result['artists']['items']))
             return art_list
         except SpotifyException as e:
             logger.exception("I caught the HTTPError\n%s" % e)
@@ -260,6 +125,49 @@ class User(object):
                 self.get_following_artists()
         except Exception as e:
             logger.exception('Cannot get following artists!\n%s' % e)
+
+    @benchmark
+    def _filling_artists_with_albums(self, artists):
+        for artist in artists:
+            album, single, appears, compilation = self.get_latest_compositions(artist)
+            artist.latest_album = album
+            artist.latest_single = single
+            artist.latest_appears = appears
+            artist.latest_compilation = compilation
+        return  artists
+
+    def get_latest_compositions(self, artist):
+        logger.info('Getting a latest compositions for artist: %s...' % artist.name)
+        res = []
+        composition_types = ['album', 'single', 'appears_on', 'compilation']
+        for composition in composition_types:
+            compos = self.get_compositions(album_group=composition, limit=1, artist=artist)
+            res.append(compos if len(compos) != 0 else [None])
+        return res[0][0], res[1][0], res[2][0], res[3][0]
+
+    def get_compositions(self, album_group, artist, limit=None):
+        logger.info('Getting %s "%s"' % (str(limit) if limit is not None else 'all',  album_group))
+        artist_compositions = []
+        try:
+            compositions = self.token.artist_albums(artist.artist_id, album_type=album_group)
+            artist_compositions.extend(self._albums_list_from_json(compositions['items']))
+            if limit is None:
+                limit = compositions['total']
+            while compositions['next']:
+                if len(artist_compositions) < limit:
+                    compositions = self.token.next(compositions)
+                    artist_compositions.append(compositions['items'])
+                else:
+                    break
+            return artist_compositions[:limit]
+        except SpotifyException as e:
+            logger.exception("I caught the HTTPError\n%s" % e)
+            if e.http_status == 401:
+                logger.debug("Token was expired... Attempt to refresh the token and retry action")
+                pass
+        except Exception as e:
+            logger.error('Cannot get the %s!\n%s' % (album_group, e))
+            logger.exception('Cannot get the %s!')
 
     @staticmethod
     def _get_updates(new_artist, album_group, init_composition):
@@ -317,6 +225,10 @@ class User(object):
             return [], init_art_list
 
 
+# Get config
+conf = get_conf()
+
+
 def main():
     username = "pva55ddk3p2lm234s5yhh2dyl"
     logger.info('Spotify process was started...')
@@ -335,9 +247,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # result = sp.current_user_followed_artists(after=None)
-    # result = sp.artist_albums('6zNJCgmbt1BbC9d9HWPaHx')  # Egor Nuts
-    # print(json.dumps(result, indent=4))
     main()
-
-
