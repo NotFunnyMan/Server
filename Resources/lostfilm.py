@@ -68,6 +68,7 @@ class LostFilm(object):
 def send_notification(updates):
     result = []
     for update in updates:
+        logger.info("New series: %s ; series: %s" % (LostFilm.RESOURCE, update['title']))
         data = {
             "data":
                 {

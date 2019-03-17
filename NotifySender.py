@@ -30,7 +30,6 @@ def send(updates):
     try:
         for update in updates:
             update['to'] = conf['MY_PHONE']
-            logger.info("Send notification for resource: %s ; series: %s" % ('1', '2'))
             res = requests.post(conf['GOOGLE_URL'], headers=header, json=update)
             logger.debug("Notification status code: %s" % res.status_code)
             if res.status_code is not requests.codes.ok:
