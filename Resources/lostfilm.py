@@ -1,12 +1,13 @@
-import Resources.series as series
-from bs4 import BeautifulStoneSoup
+import xmltodict
 import urllib.request as req
 import logging
-
+import NotifySender as ns
+import random
+import platform
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("../Logs/server.log")
+fh = logging.FileHandler('D:/Projects/Anaconda/DontMiss/Server/Logs/server.log') if platform.system() == 'Windows' else '/server.log'
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -20,34 +21,65 @@ class LostFilm(object):
 
     RESOURCE = "LostFilm.tv"
     URL = "http://www.lostfilm.tv/rss.xml"
-    FEED = []
 
-    # Инициализация модуля
     def __init__(self):
         try:
-            # Получение xml в string формате
-            with req.urlopen(self.URL) as open_url:
-                soup = BeautifulStoneSoup(open_url.read())
-                self.FEED = (series.series_from_xml(soup, 'item'))[2:]
+            feed = self.get_rss_feed()
+            self.series_list = feed['rss']['channel']['item']
         except Exception as e:
-            logger.error("Cannot get a XML-file: %s" % e)
+            logger.exception("Cannot get a RSS-feed: %s" % e)
 
-    # Проверка обновлений
     def check_updates(self):
         logger.info("Start checking updates")
         try:
-            xml_file = BeautifulStoneSoup(req.urlopen(self.URL).read())
-            if xml_file:
-                series_list = series.series_from_xml(xml_file)
-                updates = [elem for elem in series_list if elem not in self.FEED]
-                if len(self.FEED) == 12:
-                    self.FEED = updates + self.FEED[:-len(updates)]
-                else:
-                    self.FEED = updates + self.FEED
-                updates.reverse()
+            new_feed = self.get_rss_feed()
+            if new_feed:
+                new_series_list = new_feed['rss']['channel']['item']
+                updates = self._series_comparison(self.series_list[2:], new_series_list)  # "2:" для теста
+                self.series_list = new_series_list
                 return updates
             else:
                 return []
         except Exception as e:
-            logger.error("Check failed : %s" % e)
+            logger.exception("Check failed: %s" % e)
             return []
+
+    def get_rss_feed(self):
+        feed = self._read_xml()
+        return self._xml_to_json(feed)
+
+    def _read_xml(self):
+        with req.urlopen(self.URL) as open_url:
+            return open_url.read()
+
+    @staticmethod
+    def _xml_to_json(xml):
+        return xmltodict.parse(xml, encoding='utf-8')
+
+    @staticmethod
+    def _series_comparison(old_data, new_data):
+        updates = []
+        for new in new_data:
+            if new not in old_data:
+                updates.append(new)
+        return updates
+
+
+def send_notification(updates):
+    result = []
+    for update in updates:
+        data = {
+            "data":
+                {
+                    "body": update['title'],
+                    "title": "Вышла новая серия сериала на " + LostFilm.RESOURCE,
+                    "icon": "http:" + update['description'].split('"')[1],
+                    "resource": LostFilm.RESOURCE,
+                    "sound": "default",
+                    "priority": "high",
+                    "id": random.randint(1, 1000)
+                },
+            }
+        result.append(data)
+    result.reverse()
+    ns.send(result)

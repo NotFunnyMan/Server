@@ -1,12 +1,11 @@
 import time
 import logging
-
-import NotifySender as Notify
 import Resources.lostfilm as lf
+import platform
 
 logger = logging.getLogger("Core")
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler("server.log")
+fh = logging.FileHandler('D:/Projects/Anaconda/DontMiss/Server/Logs/server.log') if platform.system() == 'Windows' else '/server.log'
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -23,7 +22,7 @@ if __name__ == "__main__":
         try:
             lf_updates = lostfilm_initial_value.check_updates()
             if lf_updates:
-                Notify.send(lf_updates, lostfilm_initial_value.RESOURCE)
+                lf.send_notification(lf_updates)
             else:
                 logger.info('No updates...')
             logger.info("Time to sleep....")
