@@ -25,10 +25,10 @@ def benchmark(func):
 
 def check_token(func):
     def wrapper(*args, **kwargs):
-        f = open('Cache/.cache-pva55ddk3p2lm234s5yhh2dyl').read()
+        f = open(conf['CACHE_PATH'].replace('../', '') + ".cache-" + my_username).read()
         f = json.loads(f)
         if oauth2.is_token_expired(f):
-            # refresh the token!
+            # args[0] = oauth2. # надо переписывать сам метод работы с токеном
             pass
         res = func(*args, **kwargs)
         return res
@@ -125,14 +125,13 @@ def db_load(filename):
 
 @benchmark
 def db_dump(data, filename):
-    filename = 'LocalDB/' + str(filename)
     if type(data) is not list:
         data = [data]
-    if os.path.isfile(filename):
+    if os.path.isfile('LocalDB/' + str(filename)):
         data_from_json = db_load(filename)
         data_from_json.extend(data)
         data = data_from_json
-    with open(filename, 'w', encoding='utf-8') as f:
+    with open('LocalDB/' + str(filename), 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
@@ -193,6 +192,7 @@ def check_updates():
                 compos = get_compositions(token, album_group=composition, limit=1, artist_id=user_artist['id'])
                 if _compare_two_compositions(artist['latest_' + composition], compos):
                     # new composition
+                    pprint.pprint("\n\nNEW COMPOSITION!\n %s\n\n" % compos)
                     pass
 
 
@@ -204,5 +204,7 @@ if __name__ == '__main__':
     db_dump(my_artists, 'initialize.json')
     _dump_artist_user(my_artists['artists'], my_username)
 
-    check_updates()
-    print('ЧЕКАЙ ЕБАЛО!')
+    while True:
+        print('SLEEP DELAY_BTW_GET_UPDATES')
+        time.sleep(DELAY_BTW_GET_UPDATES)
+        check_updates()
