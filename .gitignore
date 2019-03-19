@@ -261,6 +261,8 @@ __pycache__/
 *.pyc
 
 # My files
-rss.xml
-server.log
 venv/
+Confs/
+Logs/
+Cache/
+LocalDB/
