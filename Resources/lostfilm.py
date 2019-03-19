@@ -7,6 +7,8 @@ import platform
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
+
+
 logfile = 'D:/Projects/Anaconda/DontMiss/Server/Logs/server.log' if platform.system() == 'Windows' else '/server.log'
 fh = logging.FileHandler(logfile)
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
