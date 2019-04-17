@@ -7,6 +7,8 @@ import platform
 
 logger = logging.getLogger("LostFilm")
 logger.setLevel(logging.DEBUG)
+
+
 logfile = 'D:/Projects/Anaconda/DontMiss/Server/Logs/server.log' if platform.system() == 'Windows' else '/server.log'
 fh = logging.FileHandler(logfile)
 formatter = logging.Formatter(u"%(asctime)s : %(levelname)-5s : %(filename)s : %(name)s logger : %(message)s")
@@ -47,7 +49,7 @@ class LostFilm(object):
 
     def get_rss_feed(self):
         feed = self._read_xml()
-        return self._xml_to_json(feed)
+        return self._xml_to_json(feed.decode('utf-8').replace('&', 'and'))
 
     def _read_xml(self):
         with req.urlopen(self.URL) as open_url:
